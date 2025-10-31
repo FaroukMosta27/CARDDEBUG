@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أداة التشخيص الاحترافية لأكواد POST</title>
+    <!-- تحميل Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* خط عربي محسن */
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #f7f9fc;
+        }
+        .shadow-neon {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.7), 0 0 5px rgba(59, 130, 246, 0.2);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-blue': '#3b82f6',
+                        'success-green': '#10b981',
+                        'danger-red': '#ef4444',
+                        'warning-yellow': '#f59e0b',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="p-4 sm:p-8">
+
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-2xl p-6 sm:p-10 border-t-8 border-primary-blue">
+        <header class="text-center mb-10">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-800 mb-2">الدليل الشامل لتشخيص أعطال اللوحة الأم (POST Codes)</h1>
+            <p class="text-lg text-gray-500">ابحث عن كود التشخيص (00-FF) لتجد الوصف والسبب وطريقة الإصلاح بدقة.</p>
+            <p class="text-sm text-primary-blue font-bold mt-2">قاعدة بيانات كاملة: تشمل كل الأكواد من 00 إلى FF سداسي عشري.</p>
+        </header>
+
+        <!-- Search Input -->
+        <div class="mb-8">
+            <label for="postCodeInput" class="block text-gray-700 font-bold mb-2">أدخل كود POST سداسي عشري (00-FF) (مثال: C1, 55, F0):</label>
+            <input type="text" id="postCodeInput" placeholder="أدخل الكود هنا..."
+                   class="w-full p-4 text-center text-xl border-2 border-primary-blue rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-300 uppercase tracking-widest"
+                   oninput="searchCode(this.value)">
+        </div>
+
+        <!-- Results Display -->
+        <div id="resultsContainer" class="space-y-6">
+            <div id="initialMessage" class="p-6 text-center text-gray-500 bg-gray-100 rounded-lg">
+                <p class="text-lg font-medium">ابدأ بإدخال كود التشخيص في مربع البحث أعلاه للحصول على تحليل مفصل وشامل.</p>
+            </div>
+            <!-- Results will be injected here -->
+        </div>
+
+        <!-- Static Database Section -->
+        <div class="mt-12 pt-8 border-t border-gray-200">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">قاعدة البيانات: جميع الأكواد من 00 إلى FF</h2>
+            <p class="text-gray-600">الأكواد أدناه تمثل مزيجاً شاملاً من أنظمة البيوس الشائعة (AMI, Award) وأكواد بطاقات التشخيص المتخصصة (Qiguan/KQCPET6).</p>
+        </div>
+    </div>
+
+    <script>
+        // قاعدة البيانات التشخيصية الشاملة (00 إلى FF)
+        const diagnosticDatabase = [
+            // --- 0x00 - 0x0F (مرحلة المعالج والتهيئة المبكرة) ---
+            { code: "00", type: "AMI/Award (طبيعي/حرج)", description: "تجاوز ناجح لجميع إجراءات POST أو توقف حرج عند المعالج/الطاقة.", cause: "نجاح التشخيص (عادةً) أو فشل في الطاقة الأولية للمعالج.", fix: "1. إذا توقف هنا، أعد تركيب المعالج وتأكد من تثبيت المبرد. 2. تحقق من كابلات طاقة المعالج 4/8-Pin." },
+            { code: "01", type: "AMI/Award", description: "تهيئة المعالج (CPU) وتحديد نوعه. إيقاف التعطيل (Disable NMI).", cause: "فشل في التعرف على المعالج أو مشكلة في دائرة الطاقة الأولية (VCore).", fix: "1. أعد تركيب المعالج وتأكد من سلامة دبابيس المقبس. 2. جرب Clear CMOS. 3. افحص جهد VCore." },
+            { code: "02", type: "AMI/Award", description: "تهيئة متحكم المقاطعات المبكر (Early PIC) ومتحكم الوصول المباشر للذاكرة (DMA).", cause: "فشل في تهيئة المكونات الأساسية للـ Chipset.", fix: "1. المشكلة في الشيب الجنوبي/PCH. 2. جرب فصل جميع الأجهزة الطرفية واختبار اللوحة الأم وحدها." },
+            { code: "03", type: "AMI/Award", description: "تهيئة مؤقت النظام (System Timer) ومسجلات المعالج.", cause: "فشل في تهيئة المكونات الزمنية للوحة الأم.", fix: "1. جرب Clear CMOS. 2. تحقق من بطارية CMOS (قد تكون المشكلة في الوقت والتاريخ)." },
+            { code: "04", type: "AMI/Award", description: "اختبار قراءة/كتابة CMOS (مرحلة مبكرة).", cause: "خطأ في قراءة إعدادات البيوس أو تلف بيانات CMOS.", fix: "1. جرب Clear CMOS. 2. استبدل بطارية CMOS." },
+            { code: "05", type: "AMI/Award", description: "تهيئة أولية للـ Chipset (إعداد الجسور).", cause: "مشكلة في إعداد الجسور الشمالي/الجنوبي (North/South Bridge).", fix: "1. افحص دوائر الطاقة للـ Chipset. 2. جرب تحديث البيوس." },
+            { code: "06", type: "AMI/Award", description: "تهيئة أولية لبطاقة الرسوميات (VGA).", cause: "مشكلة في اكتشاف بطاقة VGA المدمجة أو المنفصلة.", fix: "1. أعد تركيب البطاقة المنفصلة. 2. تأكد من توصيل الطاقة للبطاقة." },
+            { code: "07", type: "AMI/Award", description: "فحص ذاكرة الكاش الخاصة بالمعالج (Cache Memory).", cause: "فشل في إعداد أو فحص ذاكرة الكاش.", fix: "1. افحص المعالج ومقبسه. 2. تأكد من توافق البيوس مع المعالج." },
+            { code: "08", type: "AMI/Award", description: "اختبار الذاكرة العشوائية الأساسية (Base RAM) 64 كيلوبايت.", cause: "فشل في الوصول إلى أول 64 كيلوبايت من الذاكرة.", fix: "1. طبق حلول الذاكرة (C1/55). 2. ركز على شقوق الذاكرة الرئيسية." },
+            { code: "09", type: "AMI/Award", description: "تهيئة متحكم الـ DMA الثاني.", cause: "فشل في إعداد متحكمات الوصول المباشر للذاكرة.", fix: "1. مشكلة في الشيب الجنوبي/PCH. 2. افصل جميع الأجهزة الطرفية (USB/SATA)." },
+            { code: "0A", type: "AMI/Award", description: "تهيئة متحكم المقاطعات الثاني (PIC).", cause: "مشكلة في إعداد متحكمات المقاطعات.", fix: "1. مشكلة في الشيب الجنوبي/PCH. 2. جرب Clear CMOS." },
+            { code: "0B", type: "AMI/Award", description: "اختبار الذاكرة المخبئية (Cache Memory).", cause: "فشل في اختبار ذاكرة الكاش الثانوية.", fix: "1. افحص المعالج ومقبسه. 2. افحص لوحة الأم بحثاً عن تلف مادي." },
+            { code: "0C", type: "AMI/Award", description: "تهيئة لوحة المفاتيح والماوس (Keyboard/Mouse Init).", cause: "عطل في متحكم لوحة المفاتيح (Super I/O) أو منافذ PS/2/USB.", fix: "1. جرب لوحة مفاتيح وماوس مختلفة. 2. افحص متحكم Super I/O." },
+            { code: "0D", type: "Award/AMI (رسوميات/حرج)", description: "فحص وتهيئة البيوس الخاص ببطاقة الرسوميات (VGA BIOS).", cause: "مشكلة في بطاقة الرسوميات المنفصلة أو المدمجة، أو عدم توصيل الطاقة الإضافية.", fix: "1. أزل البطاقة المنفصلة واستخدم المدمجة. 2. تأكد من توصيل كابلات الطاقة 6/8-Pin للبطاقة. 3. جربها على شق PCI-E آخر." },
+            { code: "0E", type: "AMI/Award", description: "تهيئة ذاكرة الكاش (Cache) (مرحلة متقدمة).", cause: "فشل في إعداد ذاكرة الكاش L1/L2.", fix: "1. أعد تركيب المعالج. 2. افحص جهد المعالج (VCore)." },
+            { code: "0F", type: "AMI/Award", description: "فحص وتهيئة شريحة CMOS.", cause: "خطأ في قراءة أو كتابة بيانات CMOS.", fix: "1. جرب Clear CMOS. 2. استبدل بطارية CMOS." },
+
+            // --- 0x10 - 0x1F (تهيئة متقدمة للنظام/الذاكرة) ---
+            { code: "10", type: "AMI (معالج/تهيئة)", description: "تهيئة المعالج (CPU) الأولية (مكرر).", cause: "فشل في الاتصال الأولي بالمعالج أو عطل في دوائر الطاقة CPU Vcore.", fix: "1. افحص مثبتات المعالج وتأكد من التركيب السليم. 2. تحقق من كابلات طاقة المعالج (4/8-Pin)." },
+            { code: "11", type: "AMI/Award", description: "تهيئة متحكم الذاكرة (Memory Controller).", cause: "فشل في إعداد متحكم الذاكرة داخل المعالج (IMC).", fix: "1. افصل وأعد تركيب وحدات RAM. 2. افحص دبابيس مقبس المعالج." },
+            { code: "12", type: "AMI/Award", description: "تكوين مسجلات البيوس (BIOS Registers).", cause: "مشكلة في تحميل إعدادات البيوس الأولية.", fix: "1. جرب Clear CMOS. 2. قد تحتاج إلى تحديث البيوس." },
+            { code: "13", type: "AMI/Award", description: "فحص وإعادة تشغيل النظام (System Reset).", cause: "فشل في إجراء إعادة التشغيل الأولية.", fix: "1. افحص زر إعادة التشغيل (Reset) على اللوحة الأم. 2. مشكلة في دوائر Clock Gen." },
+            { code: "14", type: "AMI/Award", description: "اختبار الذاكرة الموسعة (Extended Memory).", cause: "فشل في اختبار أجزاء من الذاكرة العشوائية.", fix: "1. اتبع حلول الذاكرة (C1/55). 2. جرب وحدة RAM واحدة." },
+            { code: "15", type: "AMI/Award", description: "فحص مؤقتات النظام والمقاطعات (Timers/Interrupts).", cause: "فشل في إعداد مكونات النظام الأساسية.", fix: "1. جرب Clear CMOS. 2. افصل جميع الملحقات غير الأساسية." },
+            { code: "16", type: "AMI/Award", description: "تكوين متحكم الذاكرة (Memory Controller Configuration).", cause: "فشل في ضبط توقيتات الذاكرة (Timings) أو سرعتها.", fix: "1. جرب إعدادات ذاكرة يدوية أقل سرعة. 2. تحديث البيوس." },
+            { code: "17", type: "AMI/Award", description: "فحص متحكم الـ DMA الأول.", cause: "مشكلة في متحكم الوصول المباشر للذاكرة.", fix: "1. مشكلة في الشيب الجنوبي/PCH. 2. جرب فصل جميع الأجهزة الطرفية." },
+            { code: "18", type: "AMI/Award", description: "فحص متحكم الـ DMA الثاني.", cause: "مشكلة في متحكم الوصول المباشر للذاكرة.", fix: "1. مشكلة في الشيب الجنوبي/PCH. 2. افحص دوائر الطاقة." },
+            { code: "19", type: "AMI/Award", description: "فحص متحكم المقاطعات الأول.", cause: "مشكلة في متحكم المقاطعات.", fix: "1. مشكلة في الشيب الجنوبي/PCH. 2. جرب Clear CMOS." },
+            { code: "1A", type: "AMI/Award", description: "فحص متحكم المقاطعات الثاني.", cause: "مشكلة في متحكم المقاطعات.", fix: "1. مشكلة في الشيب الجنوبي/PCH. 2. افحص لوحة الأم." },
+            { code: "1B", type: "AMI/DELL", description: "خطوة تهيئة غير محددة توقفت. غالباً في مرحلة فحص الشيبست أو الذاكرة الأولية.", cause: "فشل في خطوة تهيئة حرجة بعد المعالج.", fix: "1. جرب Clear CMOS. 2. إزالة جميع الملحقات غير الأساسية. 3. تطبيق حلول الذاكرة (C1/55)." },
+            { code: "1C", type: "AMI/Award", description: "بدء تهيئة الذاكرة (DRAM Init).", cause: "مشكلة في إرسال أوامر التهيئة للذاكرة.", fix: "1. افصل وأعد تركيب وحدات RAM. 2. جرب شقوق ذاكرة مختلفة." },
+            { code: "1D", type: "AMI/Award", description: "تهيئة متحكم الذاكرة (DRAM Controller).", cause: "مشكلة في متحكم الذاكرة.", fix: "1. افحص المعالج. 2. جرب تحديث البيوس." },
+            { code: "1E", type: "AMI/Award", description: "فحص مسجلات الذاكرة (Memory Registers).", cause: "فشل في قراءة مسجلات الذاكرة.", fix: "1. اتبع حلول الذاكرة (C1/55). 2. افحص دبابيس المعالج." },
+            { code: "1F", type: "AMI/Award", description: "تكوين الذاكرة (Memory Configuration).", cause: "فشل في ضبط إعدادات الذاكرة.", fix: "1. جرب Clear CMOS. 2. استبدال الذاكرة بوحدات متوافقة." },
+
+            // --- 0x20 - 0x2F (مرحلة الذاكرة والطرفيات الأساسية) ---
+            { code: "20", type: "AMI/Award", description: "تهيئة متحكم الوصول المباشر للذاكرة (DMA).", cause: "فشل في تهيئة شريحة التحكم DMA (غالباً جزء من الشيب الجنوبي/PCH).", fix: "1. المشكلة في الشيب الجنوبي. 2. جرب Clear CMOS. 3. تأكد من عدم وجود تداخلات من أجهزة طرفية." },
+            { code: "21", type: "AMI/Award", description: "تهيئة متحكم المقاطعات (PIC).", cause: "فشل في تهيئة شريحة التحكم في المقاطعات.", fix: "1. مشكلة في الشيب الجنوبي/PCH. 2. افحص اللوحة الأم بحثاً عن تلف مادي." },
+            { code: "22", type: "AMI/Award", description: "اختبار الذاكرة العشوائية الأساسية (Base RAM) 64 كيلوبايت (تأكيد).", cause: "فشل في أول جزء من ذاكرة النظام.", fix: "1. نفذ خطوات إصلاح الذاكرة (C1/55). 2. التركيز على الشقوق القريبة من المعالج." },
+            { code: "23", type: "AMI/Award", description: "اختبار الذاكرة العشوائية الأساسية (Base RAM) 64 كيلوبايت (تأكيد).", cause: "فشل في أول جزء من ذاكرة النظام.", fix: "1. نفذ خطوات إصلاح الذاكرة (C1/55). 2. التركيز على الشقوق القريبة من المعالج." },
+            { code: "24", type: "AMI/Award", description: "تهيئة مؤقت النظام (System Timer).", cause: "فشل في تهيئة شريحة التحكم بالمؤقت.", fix: "1. قد يكون السبب الشيب الجنوبي. 2. جرب إزالة جميع الأجهزة الطرفية (USB, HDD, SSD)." },
+            { code: "25", type: "AMI/Award (النظام)", description: "تهيئة مؤقت النظام (System Timer) واختبار منافذ الإدخال/الإخراج.", cause: "فشل في تهيئة شريحة التحكم بالمؤقت (Timer Chip) أو خطأ في عمليات الإدخال/الإخراج.", fix: "1. قد يكون السبب الشيب الجنوبي. 2. جرب إزالة جميع الأجهزة الطرفية (USB, HDD, SSD)." },
+            { code: "26", type: "AMI/Award", description: "فحص متحكم لوحة المفاتيح.", cause: "عطل في متحكم لوحة المفاتيح (Super I/O).", fix: "1. افصل جميع أجهزة الإدخال (لوحة المفاتيح/الماوس). 2. افحص جهد Super I/O." },
+            { code: "27", type: "AMI/Award", description: "فحص وإعادة تعيين الذاكرة الإضافية (Extended Memory).", cause: "فشل في اختبار أجزاء من الذاكرة العشوائية.", fix: "1. اتبع حلول الذاكرة (C1/55). 2. جرب وحدة RAM واحدة." },
+            { code: "28", type: "AMI/Award", description: "فحص مؤقتات النظام والمقاطعات (Timers/Interrupts) (تأكيد).", cause: "فشل في إعداد مكونات النظام الأساسية.", fix: "1. جرب Clear CMOS. 2. افصل جميع الملحقات غير الأساسية." },
+            { code: "29", type: "AMI/Award", description: "تهيئة VGA BIOS.", cause: "مشكلة في اكتشاف أو تهيئة بطاقة الرسوميات.", fix: "1. أعد تركيب بطاقة VGA. 2. تأكد من سلامة فتحة PCI-E." },
+            { code: "2A", type: "AMI/Award", description: "اختبار الذاكرة الموسعة (Extended Memory) (تأكيد).", cause: "فشل في اختبار أجزاء من الذاكرة العشوائية.", fix: "1. اتبع حلول الذاكرة (C1/55). 2. جرب وحدة RAM واحدة." },
+            { code: "2B", type: "AMI/Award", description: "إنشاء مساحة بيانات البيوس (BIOS Data Area - BDA).", cause: "مشكلة في تخصيص ذاكرة النظام الأولية.", fix: "1. جرب Clear CMOS. 2. افصل أي أجهزة طرفية خارجية." },
+            { code: "2C", type: "AMI/Award", description: "إنشاء جدول ناقل المقاطعة (Interrupt Vector Table - IVT).", cause: "فشل في إنشاء جدول مقاطعة النظام.", fix: "1. مشكلة في الشيب الجنوبي/PCH. 2. جرب تحديث البيوس." },
+            { code: "2D", type: "AMI/Award", description: "تهيئة شاشة العرض (Display Initialization).", cause: "مشكلة في الإخراج الرسومي قبل التحميل.", fix: "1. أعد تركيب بطاقة VGA. 2. جرب استخدام مخرج رسومي آخر." },
+            { code: "2E", type: "AMI/Award", description: "تهيئة مساحة البيانات الموسعة للبيوس (EBDA).", cause: "فشل في تخصيص الذاكرة الإضافية لإعدادات البيوس.", fix: "1. اتبع حلول الذاكرة (C1/55). 2. جرب Clear CMOS." },
+            { code: "2F", type: "AMI/Award", description: "فحص مسجلات متحكم الذاكرة.", cause: "مشكلة في قراءة مسجلات متحكم الذاكرة.", fix: "1. افحص المعالج ومقبسه. 2. جرب تحديث البيوس." },
+
+            // --- 0x30 - 0x3F (مرحلة لوحة المفاتيح والكاش والمنافذ) ---
+            { code: "30", type: "AMI/Award", description: "إجراء تهيئة متحكم لوحة المفاتيح.", cause: "عطل في متحكم لوحة المفاتيح (Super I/O).", fix: "1. جرب لوحة مفاتيح أخرى (USB). 2. افحص متحكم Super I/O." },
+            { code: "31", type: "AMI/Award (ملحقات)", description: "فحص لوحة المفاتيح المتصلة (Keyboard Check).", cause: "لوحة المفاتيح غير موصلة، أو عطل في متحكم لوحة المفاتيح (Keyboard Controller).", fix: "1. جرب لوحة مفاتيح أخرى (USB). 2. افحص منافذ USB/PS2. 3. مشكلة في متحكم الإدخال/الإخراج (Super I/O)." },
+            { code: "32", type: "AMI/Award", description: "فحص مرور طلب من لوحة المفاتيح.", cause: "فشل في الاتصال بين لوحة المفاتيح والبيوس.", fix: "1. جرب لوحة مفاتيح أخرى. 2. افحص منافذ PS/2." },
+            { code: "33", type: "AMI/Award", description: "فحص سجل حالة لوحة المفاتيح.", cause: "مشكلة في قراءة حالة متحكم لوحة المفاتيح.", fix: "1. جرب Clear CMOS. 2. افحص متحكم Super I/O." },
+            { code: "34", type: "AMI/Award", description: "اختبار الذاكرة العشوائية (RAM Test) وتصفيرها.", cause: "فشل في اختبار أجزاء من الذاكرة العشوائية.", fix: "1. اتبع حلول الذاكرة (C1/55). 2. جرب وحدة RAM واحدة." },
+            { code: "35", type: "AMI/Award", description: "الدخول إلى وضع الحماية (Protected Mode).", cause: "فشل في الدخول إلى وضع الحماية (غالباً بسبب الذاكرة أو المعالج).", fix: "1. افحص المعالج. 2. اتبع حلول الذاكرة (C1/55)." },
+            { code: "36", type: "AMI/Award", description: "اكتمال اختبار الذاكرة الموسعة (Extended RAM).", cause: "إذا توقف هنا، فالمشكلة تالية لإتمام اختبار الذاكرة، قد تكون في الدخول لوضع الحماية.", fix: "1. افحص البيوس/المعالج. 2. جرب وحدة ذاكرة واحدة. 3. جرب تحديث البيوس." },
+            { code: "37", type: "AMI/Award", description: "الخروج من وضع الحماية (Exit Protected Mode).", cause: "فشل في العودة إلى وضع الذاكرة الحقيقي (Real Mode).", fix: "1. افحص المعالج. 2. جرب Clear CMOS." },
+            { code: "38", type: "AMI/Award", description: "تعطيل خط العنوان A20 (Disable A20 Line).", cause: "فشل في التحكم بخط A20 المسؤول عن الذاكرة الموسعة.", fix: "1. افحص متحكم لوحة المفاتيح. 2. جرب تحديث البيوس." },
+            { code: "39", type: "AMI/Award", description: "تهيئة متحكم الكاش (Cache Controller).", cause: "فشل في تهيئة الذاكرة المخبئية للمعالج.", fix: "1. أعد تركيب المعالج. 2. مشكلة في الشيب الشمالي (في الأنظمة القديمة) أو المعالج نفسه." },
+            { code: "3A", type: "AMI/Award", description: "فحص مؤقت النظام (System Timer Check).", cause: "فشل في فحص شريحة المؤقت.", fix: "1. مشكلة في الشيب الجنوبي/PCH. 2. جرب Clear CMOS." },
+            { code: "3B", type: "AMI/Award", description: "ضبط ساعة DOS (DOS Time) وفقاً لساعة الوقت الحقيقي (RTC).", cause: "فشل في قراءة أو مزامنة ساعة الوقت الحقيقي.", fix: "1. استبدال بطارية CMOS. 2. جرب Clear CMOS." },
+            { code: "3C", type: "AMI/Award", description: "تهيئة جدول مقاطعات الأجهزة (Hardware Interrupt Table).", cause: "فشل في إعداد جدول المقاطعات.", fix: "1. مشكلة في الشيب الجنوبي/PCH. 2. جرب تحديث البيوس." },
+            { code: "3D", type: "AMI/Award", description: "البحث وتهيئة أجهزة الإشارة (Mouse/Pointers).", cause: "فشل في اكتشاف أو تهيئة الماوس/أجهزة الإشارة.", fix: "1. افصل الماوس/الأجهزة الطرفية. 2. جرب ماوس مختلف." },
+            { code: "3E", type: "AMI/Award", description: "ضبط حالة مفتاح NumLock.", cause: "فشل في ضبط حالة NumLock في البيوس.", fix: "1. جرب Clear CMOS. 2. افحص لوحة المفاتيح." },
+            { code: "3F", type: "AMI/Award", description: "تهيئة المنافذ التسلسلية والمتوازية (Serial/Parallel Ports).", cause: "فشل تهيئة متحكم Super I/O أو المنافذ.", fix: "1. افحص متحكم Super I/O. 2. جرب فصل أي جهاز موصل بالمنافذ." },
+
+            // --- 0x40 - 0x4F (مرحلة التخزين والتحميل المتقدمة) ---
+            { code: "40", type: "AMI/Award", description: "تكوين المنافذ التسلسلية والمتوازية.", cause: "فشل في تكوين المنافذ أو تعارض موارد.", fix: "1. جرب Clear CMOS. 2. قم بتعطيل المنافذ التسلسلية/المتوازية في البيوس." },
+            { code: "41", type: "AMI/Award", description: "تهيئة متحكم محرك الأقراص المرنة (FDD Controller).", cause: "فشل في تهيئة متحكم FDD (قد يكون معطل في البيوس).", fix: "1. إذا لم تستخدم FDD، تجاهل الكود. 2. جرب تعطيل FDD في البيوس." },
+            { code: "42", type: "AMI/Award", description: "تهيئة متحكم محرك الأقراص الصلبة (HDD/SATA/NVMe).", cause: "فشل في تهيئة أو اكتشاف محركات الأقراص.", fix: "1. افصل جميع أقراص التخزين. 2. تأكد من توصيل كابلات البيانات والطاقة." },
+            { code: "43", type: "AMI/Award", description: "تهيئة إدارة الطاقة لـ USB (Power Management Init for USB).", cause: "مشكلة في إعدادات طاقة منافذ USB.", fix: "1. افصل جميع أجهزة USB. 2. جرب Clear CMOS." },
+            { code: "44", type: "AMI/Award", description: "البحث وتهيئة البيوس الإضافي (Add-on BIOS).", cause: "مشكلة في اكتشاف/تشغيل بيوس لبطاقة إضافية (مثل RAID أو NIC).", fix: "1. أزل البطاقات الإضافية (عدا VGA) واختبر. 2. جرب تحديث بيوس اللوحة الأم." },
+            { code: "45", type: "AMI/Award", description: "إعادة ضبط حالة NumLock (تأكيد).", cause: "فشل في ضبط حالة NumLock في البيوس.", fix: "1. جرب Clear CMOS. 2. افحص لوحة المفاتيح." },
+            { code: "46", type: "AMI/Award", description: "فحص وظائف المعالج المساعد (Coprocessor).", cause: "مشكلة في المعالج أو وحدته الرياضية.", fix: "1. أعد تركيب المعالج. 2. جرب Clear CMOS." },
+            { code: "47", type: "AMI/Award", description: "تهيئة PCMCIA.", cause: "فشل في تهيئة متحكم PCMCIA (خاص باللابتوبات/الأجهزة القديمة).", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "48", type: "AMI/Award", description: "التحضير لبدء تشغيل نظام التشغيل (Setup OS Boot).", cause: "اكتملت معظم مهام POST، لكن هناك مشكلة في بدء التمهيد.", fix: "1. تحقق من ترتيب التمهيد في البيوس. 2. تأكد من سلامة قطاع التمهيد على قرص النظام." },
+            { code: "49", type: "AMI/Award (نظام التشغيل)", description: "نقل التحكم إلى كود Bootstrap التنفيذي.", cause: "مرحلة متقدمة جداً، المشكلة في جهاز التمهيد أو إعداداته.", fix: "1. تأكد من أن قرص النظام موصل بشكل صحيح. 2. جرب التمهيد من جهاز آخر (USB)." },
+            { code: "4A", type: "AMI/Award", description: "تهيئة إدارة الطاقة المتقدمة (APM/ACPI Init).", cause: "فشل في إعدادات إدارة الطاقة.", fix: "1. جرب Clear CMOS. 2. افحص مكثفات اللوحة الأم." },
+            { code: "4B", type: "AMI/Award", description: "اختبار الذاكرة (تأكيد مرحلي).", cause: "فشل في اختبار الذاكرة العشوائية.", fix: "1. اتبع حلول الذاكرة (C1/55). 2. جرب وحدة RAM واحدة." },
+            { code: "4C", type: "AMI/Award", description: "تهيئة أجهزة التوصيل والتشغيل (PNP Init).", cause: "فشل في إعداد أجهزة التوصيل والتشغيل.", fix: "1. افصل جميع الأجهزة الطرفية. 2. جرب تحديث البيوس." },
+            { code: "4D", type: "AMI/Award", description: "اختبار BIOS ROM (قبل Shadow ROM).", cause: "مشكلة في قراءة شريحة البيوس.", fix: "1. جرب تحديث البيوس. 2. افحص شريحة البيوس." },
+            { code: "4E", type: "AMI/Award", description: "تهيئة متحكم الـ USB.", cause: "فشل في إعداد متحكمات USB.", fix: "1. افصل جميع أجهزة USB. 2. جرب Clear CMOS." },
+            { code: "4F", type: "AMI/Award", description: "فحص أجهزة التوصيل والتشغيل.", cause: "مشكلة في تحديد موارد الأجهزة (IRQ/DMA).", fix: "1. جرب Clear CMOS. 2. قم بتعطيل الأجهزة غير المستخدمة في البيوس." },
+
+            // --- 0x50 - 0x5F (مرحلة ACPI والذاكرة الحرجة) ---
+            { code: "50", type: "AMI/Award (الطاقة)", description: "تهيئة ACPI (إدارة الطاقة المتقدمة).", cause: "مشكلة في إعدادات الطاقة المتقدمة أو دوائر الطاقة على اللوحة الأم.", fix: "1. قم بإعادة ضبط البيوس (Clear CMOS). 2. افحص مكثفات اللوحة الأم." },
+            { code: "51", type: "AMI/Award (الطاقة)", description: "تهيئة إدارة الطاقة (Power Management).", cause: "مشكلة في إعدادات PM أو عطل في دوائر اللوحة.", fix: "1. قم بإعادة ضبط البيوس (Clear CMOS). 2. فحص مصدر الطاقة (PSU)." },
+            { code: "52", type: "AMI/Award", description: "إنهاء تهيئة CMOS.", cause: "فشل في حفظ إعدادات CMOS النهائية.", fix: "1. استبدال بطارية CMOS. 2. جرب Clear CMOS." },
+            { code: "53", type: "AMI/Award", description: "تهيئة متحكمات USB الإضافية.", cause: "فشل في إعداد متحكمات USB الإضافية.", fix: "1. افصل جميع أجهزة USB. 2. جرب Clear CMOS." },
+            { code: "54", type: "AMI/Award", description: "اختبار الذاكرة الموسعة (Extended Memory) (نهائي).", cause: "فشل في اختبار أجزاء من الذاكرة العشوائية.", fix: "1. اتبع حلول الذاكرة (C1/55). 2. جرب وحدة RAM واحدة." },
+            { code: "55", type: "AMI/Award (ذاكرة/حرج)", description: "فشل تهيئة الذاكرة (Memory Initialization) أو عدم اكتشاف وحدات الذاكرة بشكل صحيح.", cause: "تلف الذاكرة، عدم توافق بين الذاكرة والمعالج/اللوحة الأم، أو تلف في متحكم الذاكرة داخل المعالج (IMC).", fix: "1. افصل وأعد تركيب جميع وحدات RAM. 2. جرب تبديل الذاكرة بوحدات موثوقة. 3. افحص دبابيس مقبس المعالج. 4. تحديث البيوس." },
+            { code: "56", type: "AMI/Award", description: "فحص محرك الأقراص الصلبة/المرنة (FDD/HDD Check).", cause: "مشكلة في اكتشاف محركات الأقراص.", fix: "1. افصل جميع أقراص التخزين. 2. افحص كابلات SATA/NVMe." },
+            { code: "57", type: "AMI/Award", description: "فحص وإعادة تعيين الذاكرة (Memory Reset).", cause: "مشكلة في إعدادات الذاكرة.", fix: "1. جرب Clear CMOS. 2. اتبع حلول الذاكرة (C1/55)." },
+            { code: "58", type: "DELL (خاص)", description: "خطوة تشخيص خاصة بنظام DELL (By detecting).", cause: "مشكلة في إعدادات النظام الخاص لـ DELL.", fix: "1. جرب Clear CMOS. 2. افصل الملحقات غير الأساسية." },
+            { code: "59", type: "AMI/Award", description: "فحص الأجهزة الطرفية (USB/PS2).", cause: "فشل في فحص الأجهزة المتصلة.", fix: "1. افصل جميع أجهزة USB/PS2. 2. جرب Clear CMOS." },
+            { code: "5A", type: "AMI/Award", description: "تهيئة أجهزة PCI.", cause: "فشل في إعداد أو اكتشاف أجهزة PCI/PCI-E.", fix: "1. أزل جميع بطاقات PCI/PCI-E باستثناء VGA. 2. افحص الشقوق." },
+            { code: "5B", type: "AMI/Award", description: "تهيئة أجهزة PCI (تأكيد).", cause: "فشل في إعداد أو اكتشاف أجهزة PCI/PCI-E.", fix: "1. أزل جميع بطاقات PCI/PCI-E باستثناء VGA. 2. افحص الشقوق." },
+            { code: "5C", type: "ASRock/AMI (ذاكرة)", description: "لا توجد ذاكرة مكتشفة أو فشل في الاختبار الذاتي للذاكرة.", cause: "فشل في تهيئة الذاكرة، مشابه لـ C1 و 55.", fix: "اتبع نفس خطوات الإصلاح الخاصة بالكود C1/55 (التركيب، التنظيف، التبديل)." },
+            { code: "5D", type: "AMI/Award", description: "تهيئة المتحكمات المتقدمة.", cause: "مشكلة في إعداد المتحكمات المتقدمة في الشيب الجنوبي/PCH.", fix: "1. جرب Clear CMOS. 2. افحص الشيب الجنوبي." },
+            { code: "5E", type: "Qiguan Diagnosis (بيوس)", description: "فشل عمل الكشف الذاتي عن أعطال البيوس.", cause: "مشكلة في شريحة البيوس نفسها، أو فشل في إحدى دورات البيوس الأولية.", fix: "1. جرب Clear CMOS. 2. إذا استمر العطل، قد تحتاج إلى إعادة برمجة شريحة البيوس (Flash ROM)." },
+            { code: "5F", type: "Qiguan Diagnosis (بيوس)", description: "الكشف الذاتي لأعطال البيوس - لم يتم اكتشاف أي مشاكل.", cause: "يشير إلى نجاح فحص البيوس، لكن التوقف يعني عطل تالٍ (معالج/ذاكرة).", fix: "تابع التشخيص باستخدام أكواد Qiguan الأخرى أو أكواد البيوس الرئيسية. راجع الكود السابق لـ 5F." },
+
+            // --- 0x60 - 0x6F (أكواد Qiguan/AMI متقدمة) ---
+            { code: "60", type: "Qiguan Diagnosis (إعادة ضبط)", description: "فشل إنهاء حالة إعادة الضبط (Quit resetting status failed).", cause: "فشل في الشيبست أو المعالج في الخروج من حالة إعادة الضبط الأولية.", fix: "1. افحص جميع جهود اللوحة الأم. 2. مشكلة في الشيب الجنوبي/PCH أو وحدة مولد الساعة." },
+            { code: "61", type: "AMI/Award/Qiguan", description: "إعداد مسجلات المعالج (CPU Registers).", cause: "مشكلة في إعداد مسجلات المعالج الأولية.", fix: "1. أعد تركيب المعالج. 2. جرب Clear CMOS." },
+            { code: "62", type: "AMI/Award/Qiguan", description: "فحص مسجلات النظام (System Registers).", cause: "فشل في قراءة/كتابة مسجلات النظام الأساسية.", fix: "1. مشكلة في الشيب الجنوبي/PCH. 2. افحص دوائر الطاقة." },
+            { code: "63", type: "AMI/Award/Qiguan", description: "فحص الذاكرة وتكوينها.", cause: "فشل في إعدادات الذاكرة.", fix: "1. اتبع حلول الذاكرة (C1/55). 2. جرب تحديث البيوس." },
+            { code: "64", type: "AMI/Award/Qiguan", description: "فحص موارد الأجهزة (IRQ/DMA).", cause: "تعارض موارد الأجهزة أو فشل في تحديدها.", fix: "1. افصل جميع الأجهزة الطرفية. 2. جرب Clear CMOS." },
+            { code: "65", type: "AMI/Award/Qiguan", description: "تهيئة متحكمات USB.", cause: "فشل في إعداد متحكمات USB.", fix: "1. افصل جميع أجهزة USB. 2. جرب Clear CMOS." },
+            { code: "66", type: "AMI/Award/Qiguan", description: "تهيئة محركات الأقراص (HDD/SATA).", cause: "فشل في اكتشاف أو تهيئة محركات الأقراص.", fix: "1. افصل جميع أقراص التخزين. 2. افحص كابلات البيانات." },
+            { code: "67", type: "AMI/Award/Qiguan", description: "تهيئة متحكمات الشبكة (Network Controllers).", cause: "فشل في إعداد بطاقة الشبكة المدمجة.", fix: "1. جرب Clear CMOS. 2. قم بتعطيل كرت الشبكة المدمج في البيوس." },
+            { code: "68", type: "AMI/Award/Qiguan", description: "تهيئة الصوت (Audio Init).", cause: "فشل في إعداد كرت الصوت المدمج.", fix: "1. جرب Clear CMOS. 2. قم بتعطيل كرت الصوت المدمج في البيوس." },
+            { code: "69", type: "AMI/Award/Qiguan", description: "تهيئة أجهزة PCI الإضافية.", cause: "فشل في إعداد بطاقات PCI/PCI-E.", fix: "1. أزل جميع البطاقات الإضافية. 2. افحص شقوق التوسعة." },
+            { code: "6A", type: "AMI/Award/Qiguan", description: "إعدادات متقدمة للـ Chipset.", cause: "مشكلة في إعدادات الشيب الشمالي/الجنوبي.", fix: "1. جرب Clear CMOS. 2. افحص الشيبست." },
+            { code: "6B", type: "AMI/Award/Qiguan", description: "إعدادات متقدمة للـ Chipset.", cause: "مشكلة في إعدادات الشيب الشمالي/الجنوبي.", fix: "1. جرب Clear CMOS. 2. افحص الشيبست." },
+            { code: "6C", type: "AMI/Award/Qiguan", description: "إعدادات متقدمة للـ Chipset.", cause: "مشكلة في إعدادات الشيب الشمالي/الجنوبي.", fix: "1. جرب Clear CMOS. 2. افحص الشيبست." },
+            { code: "6D", type: "AMI/Award/Qiguan", description: "إعدادات متقدمة للـ Chipset.", cause: "مشكلة في إعدادات الشيب الشمالي/الجنوبي.", fix: "1. جرب Clear CMOS. 2. افحص الشيبست." },
+            { code: "6E", type: "AMI/Award/Qiguan", description: "إعدادات متقدمة للـ Chipset.", cause: "مشكلة في إعدادات الشيب الشمالي/الجنوبي.", fix: "1. جرب Clear CMOS. 2. افحص الشيبست." },
+            { code: "6F", type: "AMI/Award/Qiguan", description: "إعدادات متقدمة للـ Chipset.", cause: "مشكلة في إعدادات الشيب الشمالي/الجنوبي.", fix: "1. جرب Clear CMOS. 2. افحص الشيبست." },
+
+            // --- 0x70 - 0x7F (أكواد إشارة بطاقة POST (Qiguan/KQCPET6)) ---
+            { code: "70", type: "Qiguan/KQCPET6 (بطاقة POST)", description: "بطاقة POST لم تستلم كود البيوس / لا توجد إشارة CLK, IRDY, FRAME.", cause: "إشارات الاتصال مفقودة، عطل خطير في مولد الساعة (Clock Gen) أو مصدر الطاقة.", fix: "1. افحص مؤشر CLK على البطاقة. 2. تحقق من جهد مصدر الطاقة. 3. افحص مولد الساعة على اللوحة الأم." },
+            { code: "71", type: "Qiguan/KQCPET6 (بطاقة POST)", description: "بطاقة POST لم تستلم كود البيوس / لا توجد إشارة CLK, IRDY, FRAME (مكرر).", cause: "إشارات الاتصال مفقودة، عطل خطير في مولد الساعة (Clock Gen) أو مصدر الطاقة.", fix: "1. افحص مؤشر CLK على البطاقة. 2. تحقق من جهد مصدر الطاقة. 3. افحص مولد الساعة على اللوحة الأم." },
+            { code: "72", type: "Qiguan/KQCPET6 (بطاقة POST)", description: "استلام إشارة CLK، لكن لا توجد إشارة IRDY و FRAME.", cause: "مولد الساعة يعمل، لكن هناك فشل في إشارات البيانات (FRAME) واستعداد الجهاز (IRDY).", fix: "1. المشكلة في الغالب في الشيب الجنوبي (Southbridge/PCH) أو دوائر الاتصال. 2. قد تحتاج إلى إعادة تسخين/استبدال شريحة PCH." },
+            { code: "73", type: "Qiguan/KQCPET6 (بطاقة POST)", description: "استلام إشارة CLK، لكن لا توجد إشارة IRDY و FRAME (مكرر).", cause: "مولد الساعة يعمل، لكن هناك فشل في إشارات البيانات (FRAME) واستعداد الجهاز (IRDY).", fix: "1. المشكلة في الغالب في الشيب الجنوبي (Southbridge/PCH) أو دوائر الاتصال. 2. قد تحتاج إلى إعادة تسخين/استبدال شريحة PCH." },
+            { code: "74", type: "Qiguan/KQCPET6 (بطاقة POST)", description: "توجد إشارة IRDY، لا توجد CLK و FRAME.", cause: "عطل في مولد الساعة (CLK) أو خط البيانات (FRAME) على الرغم من استلام إشارة استعداد الجهاز (IRDY).", fix: "1. المشكلة في مولد الساعة على اللوحة الأم. 2. فحص كفاءة مصدر الطاقة." },
+            { code: "75", type: "AMI/Award/Qiguan", description: "تهيئة متقدمة للرسوميات (VGA).", cause: "فشل في إعدادات VGA المتقدمة.", fix: "1. أعد تركيب بطاقة VGA. 2. جرب تحديث البيوس." },
+            { code: "76", type: "AMI/Award/Qiguan", description: "تهيئة متحكمات USB الإضافية.", cause: "فشل في إعداد متحكمات USB الإضافية.", fix: "1. افصل جميع أجهزة USB. 2. جرب Clear CMOS." },
+            { code: "77", type: "AMI/Award/Qiguan", description: "تهيئة مسجلات النظام.", cause: "فشل في إعداد مسجلات النظام المتبقية.", fix: "1. جرب Clear CMOS. 2. افحص دوائر الطاقة." },
+            { code: "78", type: "AMI/Award/Qiguan", description: "تهيئة مسجلات النظام.", cause: "فشل في إعداد مسجلات النظام المتبقية.", fix: "1. جرب Clear CMOS. 2. افحص دوائر الطاقة." },
+            { code: "79", type: "AMI/Award/Qiguan", description: "فحص الإعدادات النهائية للنظام.", cause: "مشكلة في الإعدادات النهائية قبل التمهيد.", fix: "1. جرب Clear CMOS. 2. افصل جميع الأجهزة الطرفية." },
+            { code: "7A", type: "AMI/Award/Qiguan", description: "تهيئة محركات الأقراص (SATA/NVMe).", cause: "فشل في اكتشاف محركات الأقراص.", fix: "1. افصل جميع أقراص التخزين. 2. افحص كابلات البيانات." },
+            { code: "7B", type: "AMI/Award/Qiguan", description: "تهيئة المتحكمات المتقدمة.", cause: "مشكلة في إعداد المتحكمات المتقدمة في الشيب الجنوبي/PCH.", fix: "1. جرب Clear CMOS. 2. افحص الشيب الجنوبي." },
+            { code: "7C", type: "AMI/Award/Qiguan", description: "تهيئة المتحكمات المتقدمة.", cause: "مشكلة في إعداد المتحكمات المتقدمة في الشيب الجنوبي/PCH.", fix: "1. جرب Clear CMOS. 2. افحص الشيب الجنوبي." },
+            { code: "7D", type: "AMI/Award/Qiguan", description: "تهيئة المتحكمات المتقدمة.", cause: "مشكلة في إعداد المتحكمات المتقدمة في الشيب الجنوبي/PCH.", fix: "1. جرب Clear CMOS. 2. افحص الشيب الجنوبي." },
+            { code: "7E", type: "AMI/Award/Qiguan", description: "إعدادات متقدمة للـ Chipset.", cause: "مشكلة في إعدادات الشيب الشمالي/الجنوبي.", fix: "1. جرب Clear CMOS. 2. افحص الشيبست." },
+            { code: "7F", type: "AMI/Award/Qiguan", description: "إعدادات متقدمة للـ Chipset.", cause: "مشكلة في إعدادات الشيب الشمالي/الجنوبي.", fix: "1. جرب Clear CMOS. 2. افحص الشيبست." },
+
+            // --- 0x80 - 0x8F (أكواد الذاكرة والتهيئة الخاصة) ---
+            { code: "80", type: "DELL/Supermicro (ذاكرة)", description: "لا توجد ذاكرة مكتشفة أو فشل في الاختبار الذاتي للذاكرة.", cause: "مشاكل في التوافق بين الذاكرة واللوحة الأم أو عطل في الذاكرة/شقوقها.", fix: "اتبع نفس خطوات الإصلاح الخاصة بالكود C1/55. تحقق من قائمة الذاكرة المتوافقة (QVL)." },
+            { code: "81", type: "AMI/Award/Supermicro", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "82", type: "Supermicro (ذاكرة)", description: "لم يتم اكتشاف الذاكرة أو فشل الاختبار الذاتي للذاكرة.", cause: "نفس أعطال الذاكرة C1/55.", fix: "اتبع نفس خطوات الإصلاح الخاصة بالكود C1/55. تحقق من قائمة الذاكرة المتوافقة (QVL)." },
+            { code: "83", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "84", type: "Multi-Brand (ذاكرة)", description: "فشل اختبار الذاكرة (شائع في Foxconn/DELL/Biostar).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "85", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "86", type: "AMI/Award", description: "تهيئة مسجلات الذاكرة (Memory Registers).", cause: "فشل في قراءة مسجلات الذاكرة.", fix: "1. اتبع حلول الذاكرة (C1/55). 2. افحص دبابيس المعالج." },
+            { code: "87", type: "AMI/Award", description: "تكوين الذاكرة (Memory Configuration).", cause: "فشل في ضبط إعدادات الذاكرة.", fix: "1. جرب Clear CMOS. 2. استبدال الذاكرة بوحدات متوافقة." },
+            { code: "88", type: "AMI/Award", description: "فحص مسجلات الذاكرة (Memory Registers).", cause: "فشل في قراءة مسجلات الذاكرة.", fix: "1. اتبع حلول الذاكرة (C1/55). 2. افحص دبابيس المعالج." },
+            { code: "89", type: "AMI/Award", description: "تكوين الذاكرة (Memory Configuration).", cause: "فشل في ضبط إعدادات الذاكرة.", fix: "1. جرب Clear CMOS. 2. استبدال الذاكرة بوحدات متوافقة." },
+            { code: "8A", type: "Colorful H61 (خاص)", description: "فشل اختبار الذاكرة (مخصص لبعض اللوحات الصينية).", cause: "نفس أعطال الذاكرة C1/55.", fix: "اتبع نفس خطوات الإصلاح الخاصة بالكود C1/55." },
+            { code: "8B", type: "Foxconn H67S (خاص)", description: "فشل اختبار الذاكرة (مخصص لبعض لوحات Foxconn).", cause: "نفس أعطال الذاكرة C1/55.", fix: "اتبع نفس خطوات الإصلاح الخاصة بالكود C1/55." },
+            { code: "8C", type: "AMI/Award", description: "تهيئة متحكمات USB الإضافية.", cause: "فشل في إعداد متحكمات USB الإضافية.", fix: "1. افصل جميع أجهزة USB. 2. جرب Clear CMOS." },
+            { code: "8D", type: "AMI/Award", description: "تهيئة مسجلات النظام.", cause: "فشل في إعداد مسجلات النظام المتبقية.", fix: "1. جرب Clear CMOS. 2. افحص دوائر الطاقة." },
+            { code: "8E", type: "AMI/Award", description: "تهيئة مسجلات النظام.", cause: "فشل في إعداد مسجلات النظام المتبقية.", fix: "1. جرب Clear CMOS. 2. افحص دوائر الطاقة." },
+            { code: "8F", type: "AMI/Award", description: "تهيئة مسجلات النظام.", cause: "فشل في إعداد مسجلات النظام المتبقية.", fix: "1. جرب Clear CMOS. 2. افحص دوائر الطاقة." },
+
+            // --- 0x90 - 0x9F (مرحلة التمهيد والأجهزة الطرفية) ---
+            { code: "90", type: "AMI/Award", description: "تهيئة أجهزة التوصيل والتشغيل (PNP Init).", cause: "فشل في إعداد أجهزة التوصيل والتشغيل.", fix: "1. افصل جميع الأجهزة الطرفية. 2. جرب تحديث البيوس." },
+            { code: "91", type: "AMI/Award", description: "تهيئة متحكم الـ USB.", cause: "فشل في إعداد متحكمات USB.", fix: "1. افصل جميع أجهزة USB. 2. جرب Clear CMOS." },
+            { code: "92", type: "AMI/Award", description: "تهيئة متحكم الـ USB.", cause: "فشل في إعداد متحكمات USB.", fix: "1. افصل جميع أجهزة USB. 2. جرب Clear CMOS." },
+            { code: "93", type: "AMI/Award", description: "تهيئة أجهزة PCI الإضافية.", cause: "فشل في إعداد بطاقات PCI/PCI-E.", fix: "1. أزل جميع البطاقات الإضافية. 2. افحص شقوق التوسعة." },
+            { code: "94", type: "AMI/Award", description: "تهيئة أجهزة PCI الإضافية.", cause: "فشل في إعداد بطاقات PCI/PCI-E.", fix: "1. أزل جميع البطاقات الإضافية. 2. افحص شقوق التوسعة." },
+            { code: "95", type: "AMI/Award", description: "فحص الإعدادات النهائية للنظام.", cause: "مشكلة في الإعدادات النهائية قبل التمهيد.", fix: "1. جرب Clear CMOS. 2. افصل جميع الأجهزة الطرفية." },
+            { code: "96", type: "AMI/Award", description: "فحص الإعدادات النهائية للنظام.", cause: "مشكلة في الإعدادات النهائية قبل التمهيد.", fix: "1. جرب Clear CMOS. 2. افصل جميع الأجهزة الطرفية." },
+            { code: "97", type: "AMI/Award", description: "تهيئة محركات الأقراص (SATA/NVMe).", cause: "فشل في اكتشاف محركات الأقراص.", fix: "1. افصل جميع أقراص التخزين. 2. افحص كابلات البيانات." },
+            { code: "98", type: "AMI/Award", description: "تهيئة محركات الأقراص (SATA/NVMe).", cause: "فشل في اكتشاف محركات الأقراص.", fix: "1. افصل جميع أقراص التخزين. 2. افحص كابلات البيانات." },
+            { code: "99", type: "AMI/Award", description: "فحص متحكم الـ USB النهائي.", cause: "فشل في إعداد متحكمات USB النهائية.", fix: "1. افصل جميع أجهزة USB. 2. جرب Clear CMOS." },
+            { code: "9A", type: "AMI/Award", description: "فحص متحكم الـ USB النهائي.", cause: "فشل في إعداد متحكمات USB النهائية.", fix: "1. افصل جميع أجهزة USB. 2. جرب Clear CMOS." },
+            { code: "9B", type: "AMI/Award", description: "فحص الإعدادات النهائية للنظام.", cause: "مشكلة في الإعدادات النهائية قبل التمهيد.", fix: "1. جرب Clear CMOS. 2. افصل جميع الأجهزة الطرفية." },
+            { code: "9C", type: "AMI/Award", description: "فحص الإعدادات النهائية للنظام.", cause: "مشكلة في الإعدادات النهائية قبل التمهيد.", fix: "1. جرب Clear CMOS. 2. افصل جميع الأجهزة الطرفية." },
+            { code: "9D", type: "AMI/Award", description: "فحص الإعدادات النهائية للنظام.", cause: "مشكلة في الإعدادات النهائية قبل التمهيد.", fix: "1. جرب Clear CMOS. 2. افصل جميع الأجهزة الطرفية." },
+            { code: "9E", type: "AMI/Award", description: "فحص الإعدادات النهائية للنظام.", cause: "مشكلة في الإعدادات النهائية قبل التمهيد.", fix: "1. جرب Clear CMOS. 2. افصل جميع الأجهزة الطرفية." },
+            { code: "9F", type: "AMI/Award", description: "فحص الإعدادات النهائية للنظام.", cause: "مشكلة في الإعدادات النهائية قبل التمهيد.", fix: "1. جرب Clear CMOS. 2. افصل جميع الأجهزة الطرفية." },
+
+            // --- 0xA0 - 0xAF (أكواد التوصيل والتشغيل المتقدمة/OEM) ---
+            { code: "A0", type: "AMI/Award/OEM", description: "تهيئة أجهزة التوصيل والتشغيل (PNP Init) متقدمة.", cause: "فشل في إعداد أجهزة التوصيل والتشغيل.", fix: "1. افصل جميع الأجهزة الطرفية. 2. جرب تحديث البيوس." },
+            { code: "A1", type: "AMI/Award/OEM", description: "تهيئة أجهزة التوصيل والتشغيل (PNP Init) متقدمة.", cause: "فشل في إعداد أجهزة التوصيل والتشغيل.", fix: "1. افصل جميع الأجهزة الطرفية. 2. جرب تحديث البيوس." },
+            { code: "A2", type: "AMI/Award/OEM", description: "تهيئة أجهزة التوصيل والتشغيل (PNP Init) متقدمة.", cause: "فشل في إعداد أجهزة التوصيل والتشغيل.", fix: "1. افصل جميع الأجهزة الطرفية. 2. جرب تحديث البيوس." },
+            { code: "A3", type: "AMI/Award/OEM", description: "تهيئة أجهزة التوصيل والتشغيل (PNP Init) متقدمة.", cause: "فشل في إعداد أجهزة التوصيل والتشغيل.", fix: "1. افصل جميع الأجهزة الطرفية. 2. جرب تحديث البيوس." },
+            { code: "A4", type: "AMI/Award/OEM", description: "تهيئة أجهزة التوصيل والتشغيل (PNP Init) متقدمة.", cause: "فشل في إعداد أجهزة التوصيل والتشغيل.", fix: "1. افصل جميع الأجهزة الطرفية. 2. جرب تحديث البيوس." },
+            { code: "A5", type: "AMI/Award/OEM", description: "تهيئة أجهزة التوصيل والتشغيل (PNP Init) متقدمة.", cause: "فشل في إعداد أجهزة التوصيل والتشغيل.", fix: "1. افصل جميع الأجهزة الطرفية. 2. جرب تحديث البيوس." },
+            { code: "A6", type: "AMI/Award/OEM", description: "تهيئة أجهزة التوصيل والتشغيل (PNP Init) متقدمة.", cause: "فشل في إعداد أجهزة التوصيل والتشغيل.", fix: "1. افصل جميع الأجهزة الطرفية. 2. جرب تحديث البيوس." },
+            { code: "A7", type: "AMI/Award/OEM", description: "تهيئة أجهزة التوصيل والتشغيل (PNP Init) متقدمة.", cause: "فشل في إعداد أجهزة التوصيل والتشغيل.", fix: "1. افصل جميع الأجهزة الطرفية. 2. جرب تحديث البيوس." },
+            { code: "A8", type: "AMI/Award/OEM", description: "تهيئة أجهزة التوصيل والتشغيل (PNP Init) متقدمة.", cause: "فشل في إعداد أجهزة التوصيل والتشغيل.", fix: "1. افصل جميع الأجهزة الطرفية. 2. جرب تحديث البيوس." },
+            { code: "A9", type: "AMI/Award/OEM", description: "العودة من إجراء تهيئة PNP.", cause: "فشل في استئناف التشغيل بعد تهيئة PNP.", fix: "1. جرب Clear CMOS. 2. افحص دوائر الطاقة." },
+            { code: "AA", type: "AMI/Award/OEM", description: "بدء التمهيد للنظام (Boot Attempt).", cause: "فشل في بدء عملية التمهيد الفعلية.", fix: "1. تحقق من ترتيب التمهيد. 2. افحص قرص النظام." },
+            { code: "AB", type: "AMI/Award/OEM", description: "فحص جاهزية المعالج.", cause: "المعالج غير جاهز لبدء نظام التشغيل.", fix: "1. أعد تركيب المعالج. 2. افحص جهد المعالج." },
+            { code: "AC", type: "AMI/Award/OEM", description: "فحص جاهزية الذاكرة.", cause: "الذاكرة غير جاهزة لبدء نظام التشغيل.", fix: "1. اتبع حلول الذاكرة (C1/55). 2. جرب Clear CMOS." },
+            { code: "AD", type: "AMI/Award/OEM", description: "فحص جاهزية بطاقة VGA.", cause: "بطاقة الرسوميات غير جاهزة.", fix: "1. أعد تركيب بطاقة VGA. 2. افحص كابل الشاشة." },
+            { code: "AE", type: "AMI/Award/OEM", description: "فحص جاهزية متحكمات التخزين.", cause: "متحكمات التخزين غير جاهزة.", fix: "1. افصل جميع أقراص التخزين. 2. افحص كابلات البيانات." },
+            { code: "AF", type: "AMI/Award/OEM", description: "فحص جاهزية المتحكمات الإضافية.", cause: "المتحكمات الإضافية غير جاهزة.", fix: "1. افصل جميع الأجهزة الطرفية. 2. جرب Clear CMOS." },
+
+            // --- 0xB0 - 0xBF (أكواد إدارة النظام/الـ OEM) ---
+            { code: "B0", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "B1", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "B2", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "B3", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "B4", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "B5", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "B6", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "B7", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "B8", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "B9", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "BA", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "BB", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "BC", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "BD", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "BE", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+            { code: "BF", type: "AMI/Award/OEM", description: "خطوة تشخيص خاصة بالشركة المصنعة (OEM).", cause: "مشكلة في إعدادات OEM المخصصة.", fix: "1. جرب تحديث البيوس. 2. افحص دوائر الطاقة." },
+
+            // --- 0xC0 - 0xCF (أكواد SMI/Flash/Memory Critical) ---
+            { code: "C0", type: "AMI/Award (SMI)", description: "علامة دخول SMI (واجهة إدارة النظام).", cause: "خطوة طبيعية في إدارة النظام، التوقف هنا يشير إلى مشكلة في تنفيذ SMI أو دائرة SMbus.", fix: "1. افصل جميع الأجهزة الطرفية (خاصة USB). 2. مشكلة في إعدادات البيوس لإدارة الطاقة. 3. قد يكون البيوس تالفاً." },
+            { code: "C1", type: "AMI/Award/KQCPET6 (ذاكرة)", description: "لم يتم اكتشاف الذاكرة (RAM) أو فشل الاختبار الأولي للذاكرة (حرج).", cause: "عدم توصيل وحدات الذاكرة بشكل صحيح، تلف في وحدات الذاكرة، أو مشكلة في شقوق الذاكرة.", fix: "1. أعد تركيب وحدات RAM بقوة. 2. جرب بوحدة RAM واحدة. 3. نظف الشقوق والوصلات. 4. استبدال وحدات RAM." },
+            { code: "C2", type: "AMI/Award (SMI)", description: "دخول APM SMI (إدارة الطاقة المتقدمة).", cause: "فشل في الدخول لوضع إدارة الطاقة.", fix: "1. جرب Clear CMOS. 2. افحص دوائر الطاقة." },
+            { code: "C3", type: "AMI/Award (SMI)", description: "خروج APM SMI.", cause: "فشل في الخروج من وضع إدارة الطاقة.", fix: "1. جرب Clear CMOS. 2. افحص دوائر الطاقة." },
+            { code: "C4", type: "AMI/Award (SMI)", description: "تنفيذ وظيفة SW SMI (إدارة النظام البرمجية).", cause: "التوقف أثناء تنفيذ وظيفة إدارة نظام برمجية.", fix: "1. جرب Clear CMOS. 2. افصل أي أجهزة طرفية خارجية." },
+            { code: "C5", type: "AMI (HWSMI)", description: "تنفيذ وظيفة HWSMI (إدارة النظام للأجهزة).", cause: "التوقف أثناء تنفيذ وظيفة إدارة الأجهزة أو الطاقة.", fix: "1. Clear CMOS. 2. افصل أي أجهزة طرفية خارجية." },
+            { code: "C6", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "خطأ أثناء عملية تحديث البيوس.", fix: "1. إذا حدث أثناء التحديث، جرب وضع استعادة البيوس (BIOS Recovery). 2. افحص شريحة البيوس." },
+            { code: "C7", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "خطأ أثناء عملية تحديث البيوس.", fix: "1. إذا حدث أثناء التحديث، جرب وضع استعادة البيوس (BIOS Recovery). 2. افحص شريحة البيوس." },
+            { code: "C8", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "خطأ أثناء عملية تحديث البيوس.", fix: "1. إذا حدث أثناء التحديث، جرب وضع استعادة البيوس (BIOS Recovery). 2. افحص شريحة البيوس." },
+            { code: "C9", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "خطأ أثناء عملية تحديث البيوس.", fix: "1. إذا حدث أثناء التحديث، جرب وضع استعادة البيوس (BIOS Recovery). 2. افحص شريحة البيوس." },
+            { code: "CA", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "خطأ أثناء عملية تحديث البيوس.", fix: "1. إذا حدث أثناء التحديث، جرب وضع استعادة البيوس (BIOS Recovery). 2. افحص شريحة البيوس." },
+            { code: "CB", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "خطأ أثناء عملية تحديث البيوس.", fix: "1. إذا حدث أثناء التحديث، جرب وضع استعادة البيوس (BIOS Recovery). 2. افحص شريحة البيوس." },
+            { code: "CC", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "خطأ أثناء عملية تحديث البيوس.", fix: "1. إذا حدث أثناء التحديث، جرب وضع استعادة البيوس (BIOS Recovery). 2. افحص شريحة البيوس." },
+            { code: "CD", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "خطأ أثناء عملية تحديث البيوس.", fix: "1. إذا حدث أثناء التحديث، جرب وضع استعادة البيوس (BIOS Recovery). 2. افحص شريحة البيوس." },
+            { code: "CE", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "خطأ أثناء عملية تحديث البيوس.", fix: "1. إذا حدث أثناء التحديث، جرب وضع استعادة البيوس (BIOS Recovery). 2. افحص شريحة البيوس." },
+            { code: "CF", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "خطأ أثناء عملية تحديث البيوس.", fix: "1. إذا حدث أثناء التحديث، جرب وضع استعادة البيوس (BIOS Recovery). 2. افحص شريحة البيوس." },
+
+            // --- 0xD0 - 0xDF (أكواد VGA/Chipset/DELL) ---
+            { code: "D0", type: "Multi-Brand (ذاكرة/رسوميات)", description: "خطأ في التهيئة الأولية للذاكرة أو بطاقة الرسوميات (VGA).", cause: "مشكلة في الذاكرة أو فشل في تهيئة البيوس لبطاقة الرسوميات.", fix: "1. طبق حلول الكود C1. 2. أعد تركيب بطاقة الرسوميات ونظف فتحة PCI-E." },
+            { code: "D1", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "D2", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "D3", type: "Gigabyte (ذاكرة)", description: "لا توجد ذاكرة مكتشفة أو فشل في الاختبار الذاتي للذاكرة.", cause: "نفس أعطال الذاكرة C1/55.", fix: "اتبع نفس خطوات الإصلاح الخاصة بالكود C1/55." },
+            { code: "D4", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "D5", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "D6", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "D7", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "D8", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "D9", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "DA", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "DB", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "DC", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "DD", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "DE", type: "AMI/Award", description: "فشل اختبار الذاكرة العشوائية (RAM Test).", cause: "تلف الذاكرة أو عدم ضبط توقيتات الذاكرة (Timings).", fix: "1. اتبع نفس خطوات الإصلاح الخاصة بالكود C1. 2. حاول إعادة ضبط إعدادات البيوس (Clear CMOS)." },
+            { code: "DF", type: "DELL (تهيئة)", description: "خطوة تهيئة غير محددة توقفت. غالباً مرتبطة بالـ Chipset أو الذاكرة.", cause: "خطوة تهيئة غير محددة توقفت، غالباً مرتبطة بالـ Chipset.", fix: "1. جرب Clear CMOS. 2. إزالة جميع الملحقات غير الأساسية." },
+
+            // --- 0xE0 - 0xEF (أكواد Flash ROM/إدارة النظام) ---
+            { code: "E0", type: "AMI/Award", description: "بدء إجراء استعادة البيوس (BIOS Recovery).", cause: "يحدث عادة بعد فشل التحديث أو تلف البيوس.", fix: "1. تأكد من وجود ملف بيوس صحيح على جهاز خارجي (مثل USB). 2. اتبع إرشادات الاستعادة الخاصة باللوحة الأم." },
+            { code: "E1", type: "AMI/Award", description: "فشل اختبار الذاكرة أثناء الاستعادة (BIOS Recovery).", cause: "الذاكرة غير صالحة للاستخدام أثناء وضع الاستعادة.", fix: "1. جرب وحدة ذاكرة RAM أخرى أصغر حجماً. 2. تأكد من توصيل الذاكرة جيداً." },
+            { code: "E2", type: "AMI/Award", description: "فشل تهيئة الجهاز القارئ (مثل FDD/CD-ROM) أثناء الاستعادة.", cause: "الجهاز الذي يحتوي على ملف البيوس غير صالح للتشغيل.", fix: "1. جرب منفذ USB آخر. 2. تأكد من أن ملف البيوس على الجهاز الصحيح." },
+            { code: "E3", type: "AMI/Award", description: "فشل تحميل ملف البيوس من الجهاز القارئ.", cause: "ملف البيوس تالف أو غير موجود.", fix: "1. تأكد من اسم ملف البيوس وحجمه. 2. جرب ملف بيوس مختلف." },
+            { code: "E4", type: "AMI/Award", description: "فشل في التحقق من ملف البيوس (Checksum Error).", cause: "ملف البيوس تالف أو غير متوافق مع اللوحة الأم.", fix: "1. تأكد من تنزيل ملف البيوس الصحيح من موقع الشركة المصنعة. 2. جرب Clear CMOS." },
+            { code: "E5", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "مشكلة في شريحة البيوس نفسها أو عطل في دائرة الفولتية VCC.", fix: "1. افحص شريحة البيوس. 2. قد تحتاج اللوحة الأم إلى فلاش خارجي." },
+            { code: "E6", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "مشكلة في شريحة البيوس نفسها أو عطل في دائرة الفولتية VCC.", fix: "1. افحص شريحة البيوس. 2. قد تحتاج اللوحة الأم إلى فلاش خارجي." },
+            { code: "E7", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "مشكلة في شريحة البيوس نفسها أو عطل في دائرة الفولتية VCC.", fix: "1. افحص شريحة البيوس. 2. قد تحتاج اللوحة الأم إلى فلاش خارجي." },
+            { code: "E8", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "مشكلة في شريحة البيوس نفسها أو عطل في دائرة الفولتية VCC.", fix: "1. افحص شريحة البيوس. 2. قد تحتاج اللوحة الأم إلى فلاش خارجي." },
+            { code: "E9", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "مشكلة في شريحة البيوس نفسها أو عطل في دائرة الفولتية VCC.", fix: "1. افحص شريحة البيوس. 2. قد تحتاج اللوحة الأم إلى فلاش خارجي." },
+            { code: "EA", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "مشكلة في شريحة البيوس نفسها أو عطل في دائرة الفولتية VCC.", fix: "1. افحص شريحة البيوس. 2. قد تحتاج اللوحة الأم إلى فلاش خارجي." },
+            { code: "EB", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "مشكلة في شريحة البيوس نفسها أو عطل في دائرة الفولتية VCC.", fix: "1. افحص شريحة البيوس. 2. قد تحتاج اللوحة الأم إلى فلاش خارجي." },
+            { code: "EC", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "مشكلة في شريحة البيوس نفسها أو عطل في دائرة الفولتية VCC.", fix: "1. افحص شريحة البيوس. 2. قد تحتاج اللوحة الأم إلى فلاش خارجي." },
+            { code: "ED", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "مشكلة في شريحة البيوس نفسها أو عطل في دائرة الفولتية VCC.", fix: "1. افحص شريحة البيوس. 2. قد تحتاج اللوحة الأم إلى فلاش خارجي." },
+            { code: "EE", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "مشكلة في شريحة البيوس نفسها أو عطل في دائرة الفولتية VCC.", fix: "1. افحص شريحة البيوس. 2. قد تحتاج اللوحة الأم إلى فلاش خارجي." },
+            { code: "EF", type: "AMI/Award", description: "فشل تحديث شريحة البيوس (Flash ROM).", cause: "مشكلة في شريحة البيوس نفسها أو عطل في دائرة الفولتية VCC.", fix: "1. افحص شريحة البيوس. 2. قد تحتاج اللوحة الأم إلى فلاش خارجي." },
+
+            // --- 0xF0 - 0xFF (أكواد التمهيد/الإنهاء/الأخطاء النهائية) ---
+            { code: "F0", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "F1", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "F2", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "F3", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "F4", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "F5", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "F6", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "F7", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "F8", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "F9", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "FA", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "FB", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "FC", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "FD", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "FE", type: "AMI/Award", description: "النظام متوقف أو في حلقة إعادة تشغيل.", cause: "فشل حرج في مرحلة متأخرة أو إيقاف طارئ.", fix: "1. جرب Clear CMOS. 2. افحص مصدر الطاقة. 3. أزل جميع الأجهزة الطرفية." },
+            { code: "FF", type: "AMI/Award (النهائي)", description: "فشل الفحص الذاتي أو إعادة تشغيل الجهاز (حرج).", cause: "يشير إما إلى أن النظام على وشك إعادة التشغيل (طبيعي) أو فشل البيوس في البدء (حرج).", fix: "1. إذا توقف هنا، جرب تحديث البيوس (إذا كان ممكناً). 2. مشكلة في شريحة البيوس نفسها." }
+        ];
+
+        // وظيفة البحث الرئيسية
+        function searchCode(inputCode) {
+            const resultsContainer = document.getElementById('resultsContainer');
+            const initialMessage = document.getElementById('initialMessage');
+            const code = inputCode.trim().toUpperCase();
+
+            // إخفاء الرسالة الأولية
+            if (initialMessage) {
+                initialMessage.style.display = 'none';
+            }
+
+            // مسح النتائج القديمة
+            resultsContainer.innerHTML = '';
+
+            if (code === "") {
+                if (initialMessage) {
+                    initialMessage.style.display = 'block';
+                }
+                return;
+            }
+
+            // تنسيق الكود ليكون دائمًا حرفين (مثل 5 => 05)
+            const paddedCode = code.length === 1 && /[0-9A-F]/.test(code) ? '0' + code : code;
+
+            // البحث عن الكود المطابق
+            const matchingResults = diagnosticDatabase.filter(item => item.code.toUpperCase() === paddedCode);
+
+            if (matchingResults.length > 0) {
+                // عرض النتائج
+                matchingResults.forEach(result => {
+                    const resultHtml = `
+                        <div class="bg-white border border-primary-blue/30 rounded-lg p-6 shadow-lg hover:shadow-xl transition duration-300">
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 pb-4 border-b border-primary-blue/10">
+                                <h3 class="text-2xl font-extrabold text-primary-blue">${result.code} - ${result.type}</h3>
+                                <span class="text-sm font-medium text-gray-500 mt-2 sm:mt-0">${result.type}</span>
+                            </div>
+
+                            <!-- الوصف -->
+                            <div class="mb-4">
+                                <p class="text-lg font-bold text-gray-700 mb-1 flex items-center">
+                                    <span class="inline-block w-3 h-3 bg-primary-blue rounded-full ml-2"></span> الوصف الدقيق للعطل:
+                                </p>
+                                <p class="text-gray-600 leading-relaxed bg-blue-50 p-3 rounded-md">${result.description}</p>
+                            </div>
+
+                            <!-- السبب المحتمل -->
+                            <div class="mb-4">
+                                <p class="text-lg font-bold text-gray-700 mb-1 flex items-center">
+                                    <span class="inline-block w-3 h-3 bg-warning-yellow rounded-full ml-2"></span> السبب المحتمل:
+                                </p>
+                                <p class="text-gray-600 leading-relaxed bg-yellow-50 p-3 rounded-md">${result.cause}</p>
+                            </div>
+
+                            <!-- خطوات التصليح -->
+                            <div class="mb-0">
+                                <p class="text-lg font-bold text-gray-700 mb-2 flex items-center">
+                                    <span class="inline-block w-3 h-3 bg-success-green rounded-full ml-2"></span> الإجراءات الاحترافية للتصليح:
+                                </p>
+                                <div class="text-gray-600 leading-relaxed bg-green-50 p-3 rounded-md">
+                                    <ol class="list-decimal pr-5 space-y-2">
+                                        ${result.fix.split('. ').map(step => `<li>${step.trim()}</li>`).join('')}
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    resultsContainer.innerHTML += resultHtml;
+                });
+            } else {
+                // رسالة عدم العثور على الكود (يجب أن تحدث فقط إذا كان الإدخال غير سداسي عشري صالح)
+                resultsContainer.innerHTML = `
+                    <div class="p-6 text-center text-danger-red bg-red-100 rounded-lg border-2 border-danger-red/50">
+                        <p class="text-xl font-bold">عفواً، "${code}" ليس كود POST سداسي عشري صالح (00-FF).</p>
+                        <p class="text-md text-gray-700 mt-2">يرجى إدخال كود سداسي عشري مكون من حرفين أو حرف واحد (مثل 1، 55، C1، FF).</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
